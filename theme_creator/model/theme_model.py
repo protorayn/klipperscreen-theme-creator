@@ -194,10 +194,17 @@ class ThemeModel:
         self.theme_name = "new_theme"
         self.selected_role = None
         self.roles = deepcopy(DEFAULT_ROLES)
+        self.target_width = 1024
+        self.target_height = 600
+        self.preview_font_size = 18
 
         for role in self.roles.values():
             role.setdefault("text_shadow", deepcopy(DEFAULT_TEXT_SHADOW))
 
+    def set_target_resolution(self, width, height):
+        self.target_width = int(width)
+        self.target_height = int(height)
+        
     def select_role(self, role_name):
         if role_name in self.roles:
             self.selected_role = role_name

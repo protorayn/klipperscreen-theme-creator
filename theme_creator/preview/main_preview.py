@@ -5,11 +5,15 @@ from gi.repository import Gtk
 
 
 class MainPreview(Gtk.Box):
-    def __init__(self, on_role_selected=None):
+    def __init__(self, on_role_selected=None, target_width=1024, target_height=600):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
 
         self.on_role_selected = on_role_selected
         self.selected_widget = None
+        self.target_width = int(target_width)
+        self.target_height = int(target_height)
+        self.action_bar = None
+        self.graph = None
 
         self.get_style_context().add_class("ks-preview")
         self.get_style_context().add_class("preview-window")
@@ -19,6 +23,25 @@ class MainPreview(Gtk.Box):
 
         self.pack_start(title_bar, False, False, 0)
         self.pack_start(body, True, True, 0)
+
+        self.set_target_resolution(self.target_width, self.target_height)
+
+    def set_target_resolution(self, width, height):
+        self.target_width = int(width)
+        self.target_height = int(height)
+
+        self.set_size_request(self.target_width, self.target_height)
+
+        if self.action_bar is not None:
+            action_bar_width = max(80, int(self.target_width * 0.10))
+            self.action_bar.set_size_request(action_bar_width, -1)
+
+        if self.graph is not None:
+            graph_width = max(220, int(self.target_width * 0.24))
+            graph_height = max(160, int(self.target_height * 0.35))
+            self.graph.set_size_request(graph_width, graph_height)
+
+        self.queue_resize()
 
     def select_role(self, widget, role_name):
         if self.selected_widget is not None:
@@ -71,16 +94,15 @@ class MainPreview(Gtk.Box):
         return body
 
     def build_action_bar(self):
-        action_bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-        action_bar.get_style_context().add_class("action_bar")
-        action_bar.set_size_request(110, -1)
+        self.action_bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        self.action_bar.get_style_context().add_class("action_bar")
 
         for label in ["Back", "Home", "MMU", "Alert", "Power"]:
             button = Gtk.Button(label=label)
             self.make_clickable_button(button, "action_bar_button")
-            action_bar.pack_start(button, True, True, 0)
+            self.action_bar.pack_start(button, True, True, 0)
 
-        return self.make_clickable_container(action_bar, "action_bar")
+        return self.make_clickable_container(self.action_bar, "action_bar")
 
     def build_content(self):
         content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -108,11 +130,11 @@ class MainPreview(Gtk.Box):
             self.make_clickable_button(button, "heater_row")
             heater_panel.pack_start(button, False, False, 0)
 
-        graph = Gtk.DrawingArea()
-        graph.set_size_request(260, 220)
-        graph.get_style_context().add_class("heatergraph")
+        self.graph = Gtk.DrawingArea()
+        self.graph.get_style_context().add_class("heatergraph")
+
         heater_panel.pack_start(
-            self.make_clickable_container(graph, "heatergraph"),
+            self.make_clickable_container(self.graph, "heatergraph"),
             True,
             True,
             0,

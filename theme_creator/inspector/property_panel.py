@@ -2,7 +2,8 @@ import gi
 
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gtk
+
+from gi.repository import Gdk, Gtk, Pango
 
 
 DEFAULT_TEXT_SHADOW = {
@@ -30,15 +31,25 @@ def hex_from_rgba(rgba):
 
 
 class PropertyPanel(Gtk.Box):
-    def __init__(self, on_property_changed=None):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    def __init__(
+        self,
+        on_property_changed=None,
+        on_resolution_changed=None,
+        initial_width=1024,
+        initial_height=600,
+    ):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=8)
 
         self.on_property_changed = on_property_changed
+        self.on_resolution_changed = on_resolution_changed
         self.current_role_name = None
         self.current_role = None
         self.loading = False
+        self.loading_resolution = False
 
         self.get_style_context().add_class("property-panel")
+        self.set_hexpand(False)
+        self.set_vexpand(True)
         self.set_size_request(340, -1)
 
         title = Gtk.Label(label="Inspector")
@@ -48,14 +59,66 @@ class PropertyPanel(Gtk.Box):
         self.selected_label = Gtk.Label(label="Selected: none")
         self.selected_label.set_xalign(0)
 
-        self.controls_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-
         self.pack_start(title, False, False, 0)
-        self.pack_start(self.selected_label, False, False, 0)
+        self.pack_start(self.build_resolution_controls(initial_width, initial_height), False, False, 0)
         self.pack_start(Gtk.Separator(), False, False, 4)
-        self.pack_start(self.controls_box, False, False, 0)
+        self.pack_start(self.selected_label, False, False, 0)
+
+        self.controls_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+
+        viewport = Gtk.Viewport()
+        viewport.add(self.controls_box)
+
+        self.controls_scroll = Gtk.ScrolledWindow()
+        self.controls_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.controls_scroll.add(viewport)
+
+        self.pack_start(self.controls_scroll, True, True, 0)
 
         self.show_empty_state()
+
+    def build_resolution_controls(self, initial_width, initial_height):
+        wrapper = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        wrapper.get_style_context().add_class("resolution-controls")
+
+        label = Gtk.Label(label="Preview Resolution")
+        label.set_xalign(0)
+        label.get_style_context().add_class("inspector-section-title")
+        wrapper.pack_start(label, False, False, 0)
+
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+
+        self.width_spin = Gtk.SpinButton()
+        self.width_spin.set_range(320, 3840)
+        self.width_spin.set_increments(10, 100)
+        self.width_spin.set_value(int(initial_width))
+        self.width_spin.set_numeric(True)
+        self.width_spin.connect("value-changed", self.on_resolution_spin_changed)
+
+        x_label = Gtk.Label(label="×")
+
+        self.height_spin = Gtk.SpinButton()
+        self.height_spin.set_range(240, 2160)
+        self.height_spin.set_increments(10, 100)
+        self.height_spin.set_value(int(initial_height))
+        self.height_spin.set_numeric(True)
+        self.height_spin.connect("value-changed", self.on_resolution_spin_changed)
+
+        row.pack_start(self.width_spin, True, True, 0)
+        row.pack_start(x_label, False, False, 0)
+        row.pack_start(self.height_spin, True, True, 0)
+
+        wrapper.pack_start(row, False, False, 0)
+
+        return wrapper
+
+    def on_resolution_spin_changed(self, _spin):
+        if self.loading_resolution or self.on_resolution_changed is None:
+            return
+
+        width = int(self.width_spin.get_value())
+        height = int(self.height_spin.get_value())
+        self.on_resolution_changed(width, height)
 
     def clear_controls(self):
         for child in list(self.controls_box.get_children()):
@@ -87,6 +150,7 @@ class PropertyPanel(Gtk.Box):
         self.loading = True
         self.clear_controls()
 
+        self.add_section_label("Fill")
         self.add_color_control(
             "Background",
             role_data["background"]["color"],
@@ -100,6 +164,8 @@ class PropertyPanel(Gtk.Box):
             0.01,
             ("background", "alpha"),
         )
+
+        self.add_section_label("Text")
         self.add_color_control(
             "Text",
             role_data["text"]["color"],
@@ -108,6 +174,7 @@ class PropertyPanel(Gtk.Box):
 
         if role_data.get("text_selectors"):
             self.add_section_label("Text Shadow")
+
             self.add_switch_control(
                 "Enabled",
                 role_data["text_shadow"]["enabled"],
@@ -127,7 +194,7 @@ class PropertyPanel(Gtk.Box):
                 ("text_shadow", "alpha"),
             )
             self.add_scale_control(
-                "Shadow X offset",
+                "Shadow X",
                 role_data["text_shadow"]["x"],
                 -10,
                 10,
@@ -135,7 +202,7 @@ class PropertyPanel(Gtk.Box):
                 ("text_shadow", "x"),
             )
             self.add_scale_control(
-                "Shadow Y offset",
+                "Shadow Y",
                 role_data["text_shadow"]["y"],
                 -10,
                 10,
@@ -192,14 +259,15 @@ class PropertyPanel(Gtk.Box):
         label = Gtk.Label(label=text)
         label.set_xalign(0)
         label.get_style_context().add_class("inspector-section-title")
-        self.controls_box.pack_start(label, False, False, 6)
+        self.controls_box.pack_start(label, False, False, 4)
 
     def add_color_control(self, label_text, color_hex, path):
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
 
         label = Gtk.Label(label=label_text, hexpand=True)
         label.set_xalign(0)
-
+        label.set_max_width_chars(18)
+        label.set_ellipsize(Pango.EllipsizeMode.END)
         button = Gtk.ColorButton()
         button.set_rgba(rgba_from_hex(color_hex))
         button.connect("color-set", self.on_color_changed, path)
@@ -227,7 +295,8 @@ class PropertyPanel(Gtk.Box):
             adjustment=adjustment,
         )
         scale.set_digits(2 if step < 1 else 0)
-        scale.set_hexpand(True)
+        scale.set_hexpand(False)
+        scale.set_size_request(190, -1)
         scale.connect("value-changed", self.on_scale_changed, label, label_text, path)
 
         self.controls_box.pack_start(label, False, False, 0)
@@ -238,6 +307,8 @@ class PropertyPanel(Gtk.Box):
 
         label = Gtk.Label(label=label_text, hexpand=True)
         label.set_xalign(0)
+        label.set_max_width_chars(18)
+        label.set_ellipsize(Pango.EllipsizeMode.END)
 
         combo = Gtk.ComboBoxText()
         for value, display_text in options:
@@ -256,6 +327,8 @@ class PropertyPanel(Gtk.Box):
 
         label = Gtk.Label(label=label_text, hexpand=True)
         label.set_xalign(0)
+        label.set_max_width_chars(18)
+        label.set_ellipsize(Pango.EllipsizeMode.END)
 
         switch = Gtk.Switch(active=bool(active))
         switch.set_valign(Gtk.Align.CENTER)

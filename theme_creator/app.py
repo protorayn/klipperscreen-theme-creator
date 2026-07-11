@@ -16,6 +16,7 @@ class ThemeCreatorWindow(Gtk.ApplicationWindow):
         super().__init__(application=app, title="KlipperScreen Theme Creator")
 
         self.set_default_size(1200, 700)
+        self.set_size_request(900, 550)
 
         self.theme_model = ThemeModel()
 
@@ -44,14 +45,43 @@ class ThemeCreatorWindow(Gtk.ApplicationWindow):
         self.root.set_margin_end(8)
         self.add(self.root)
 
-        self.inspector = PropertyPanel(on_property_changed=self.on_property_changed)
-        self.preview = MainPreview(on_role_selected=self.on_role_selected)
+        self.preview = MainPreview(
+            on_role_selected=self.on_role_selected,
+            target_width=self.theme_model.target_width,
+            target_height=self.theme_model.target_height,
+        )
 
-        self.root.pack_start(self.preview, True, True, 0)
+        self.preview_frame = Gtk.AspectFrame(
+            label=None,
+            xalign=0.5,
+            yalign=0.5,
+            ratio=self.get_preview_ratio(),
+            obey_child=False,
+        )
+        self.preview_frame.get_style_context().add_class("preview-frame")
+        self.preview_frame.set_hexpand(True)
+        self.preview_frame.set_vexpand(True)
+        self.preview_frame.add(self.preview)
+
+        self.inspector = PropertyPanel(
+            on_property_changed=self.on_property_changed,
+            on_resolution_changed=self.on_resolution_changed,
+            initial_width=self.theme_model.target_width,
+            initial_height=self.theme_model.target_height,
+        )
+
+        self.inspector.set_hexpand(False)
+        self.inspector.set_vexpand(True)
+        self.inspector.set_size_request(340, -1)
+
+        self.root.pack_start(self.preview_frame, True, True, 0)
         self.root.pack_start(self.inspector, False, False, 0)
 
         self.apply_app_css()
         self.apply_preview_css()
+
+    def get_preview_ratio(self):
+        return self.theme_model.target_width / self.theme_model.target_height
 
     def on_role_selected(self, role_name):
         self.theme_model.select_role(role_name)
@@ -61,6 +91,12 @@ class ThemeCreatorWindow(Gtk.ApplicationWindow):
     def on_property_changed(self, role_name, path, value):
         self.theme_model.update_role_value(role_name, path, value)
         self.apply_preview_css()
+
+    def on_resolution_changed(self, width, height):
+        self.theme_model.set_target_resolution(width, height)
+        self.preview.set_target_resolution(width, height)
+        self.preview_frame.set_property("ratio", self.get_preview_ratio())
+        self.preview_frame.queue_resize()
 
     def apply_app_css(self):
         self.app_css_provider.load_from_data(APP_CSS.encode("utf-8"))
