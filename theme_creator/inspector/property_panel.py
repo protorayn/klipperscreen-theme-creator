@@ -98,6 +98,17 @@ class PropertyPanel(Gtk.Box):
             role_data["border"]["color"],
             ("border", "color"),
         )
+        self.add_combo_control(
+            "Border style",
+            role_data["border"]["position"],
+            [
+                ("none", "None"),
+                ("full", "Full"),
+                ("bottom", "Bottom"),
+                ("left", "Left"),
+            ],
+            ("border", "position"),
+        )
         self.add_scale_control(
             "Border width",
             role_data["border"]["width"],
@@ -185,8 +196,36 @@ class PropertyPanel(Gtk.Box):
 
         self.emit_change(path, value)
 
+    def on_combo_changed(self, combo, path):
+        if self.loading:
+            return
+
+        value = combo.get_active_id()
+        if value is None:
+            return
+
+        self.emit_change(path, value)
+
     def emit_change(self, path, value):
         if self.on_property_changed is None or self.current_role_name is None:
             return
 
         self.on_property_changed(self.current_role_name, path, value)
+    
+    def add_combo_control(self, label_text, active_value, options, path):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+
+        label = Gtk.Label(label=label_text, hexpand=True)
+        label.set_xalign(0)
+
+        combo = Gtk.ComboBoxText()
+        for value, display_text in options:
+            combo.append(value, display_text)
+
+        combo.set_active_id(active_value)
+        combo.connect("changed", self.on_combo_changed, path)
+
+        row.pack_start(label, True, True, 0)
+        row.pack_start(combo, False, False, 0)
+
+        self.controls_box.pack_start(row, False, False, 0)

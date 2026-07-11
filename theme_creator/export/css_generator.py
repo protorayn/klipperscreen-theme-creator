@@ -21,20 +21,23 @@ def selector_block(selectors):
 
 def border_css(border):
     width = int(border["width"])
+    position = border["position"]
 
-    if width <= 0 or border["position"] == "none":
+    if width <= 0 or position == "none":
         return "    border: 0;\n"
 
     color = hex_to_rgba(border["color"], float(border["alpha"]))
-    position = border["position"]
 
     if position == "bottom":
-        return f"    border-bottom: {width}px solid {color};\n"
+        return f"    border: 0;\n    border-bottom: {width}px solid {color};\n"
 
     if position == "left":
-        return f"    border-left: {width}px solid {color};\n"
+        return f"    border: 0;\n    border-left: {width}px solid {color};\n"
 
-    return f"    border: {width}px solid {color};\n"
+    if position == "full":
+        return f"    border: {width}px solid {color};\n"
+
+    return "    border: 0;\n"
 
 
 def role_css(role):

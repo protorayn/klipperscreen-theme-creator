@@ -45,7 +45,7 @@ DEFAULT_ROLES = {
             "alpha": 1.0,
             "width": 0,
             "radius": 14,
-            "position": "none",
+            "position": "left",
         },
         "padding": 10,
         "margin": 4,
