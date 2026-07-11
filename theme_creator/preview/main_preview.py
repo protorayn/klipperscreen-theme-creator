@@ -18,30 +18,34 @@ class MainPreview(Gtk.Box):
         self.get_style_context().add_class("ks-preview")
         self.get_style_context().add_class("preview-window")
 
+        self.set_hexpand(True)
+        self.set_vexpand(True)
+
         title_bar = self.build_title_bar()
         body = self.build_body()
 
         self.pack_start(title_bar, False, False, 0)
         self.pack_start(body, True, True, 0)
 
-        self.set_target_resolution(self.target_width, self.target_height)
+        self.connect("size-allocate", self.on_size_allocate)
 
     def set_target_resolution(self, width, height):
         self.target_width = int(width)
         self.target_height = int(height)
+        self.queue_resize()
 
-        self.set_size_request(self.target_width, self.target_height)
+    def on_size_allocate(self, _widget, allocation):
+        width = allocation.width
+        height = allocation.height
 
         if self.action_bar is not None:
-            action_bar_width = max(80, int(self.target_width * 0.10))
+            action_bar_width = max(70, int(width * 0.10))
             self.action_bar.set_size_request(action_bar_width, -1)
 
         if self.graph is not None:
-            graph_width = max(220, int(self.target_width * 0.24))
-            graph_height = max(160, int(self.target_height * 0.35))
+            graph_width = max(160, int(width * 0.22))
+            graph_height = max(120, int(height * 0.32))
             self.graph.set_size_request(graph_width, graph_height)
-
-        self.queue_resize()
 
     def select_role(self, widget, role_name):
         if self.selected_widget is not None:
@@ -84,6 +88,8 @@ class MainPreview(Gtk.Box):
 
     def build_body(self):
         body = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        body.set_hexpand(True)
+        body.set_vexpand(True)
 
         action_bar = self.build_action_bar()
         content = self.build_content()
@@ -96,6 +102,8 @@ class MainPreview(Gtk.Box):
     def build_action_bar(self):
         self.action_bar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
         self.action_bar.get_style_context().add_class("action_bar")
+        self.action_bar.set_hexpand(False)
+        self.action_bar.set_vexpand(True)
 
         for label in ["Back", "Home", "MMU", "Alert", "Power"]:
             button = Gtk.Button(label=label)
@@ -107,6 +115,8 @@ class MainPreview(Gtk.Box):
     def build_content(self):
         content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         content.get_style_context().add_class("content")
+        content.set_hexpand(True)
+        content.set_vexpand(True)
 
         heater_panel = self.build_heater_panel()
         menu_grid = self.build_menu_grid()
@@ -118,7 +128,7 @@ class MainPreview(Gtk.Box):
 
     def build_heater_panel(self):
         heater_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        heater_panel.set_size_request(280, -1)
+        heater_panel.set_size_request(240, -1)
         heater_panel.get_style_context().add_class("heater-list")
 
         heater_title = Gtk.Label(label="Heaters")
@@ -146,6 +156,8 @@ class MainPreview(Gtk.Box):
         menu_grid = Gtk.Grid(row_homogeneous=True, column_homogeneous=True)
         menu_grid.set_row_spacing(6)
         menu_grid.set_column_spacing(6)
+        menu_grid.set_hexpand(True)
+        menu_grid.set_vexpand(True)
 
         buttons = [
             ("Print", "color1"),

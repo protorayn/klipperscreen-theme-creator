@@ -65,11 +65,13 @@ class PropertyPanel(Gtk.Box):
         self.pack_start(self.selected_label, False, False, 0)
 
         self.controls_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.controls_box.set_size_request(310, -1)
 
         viewport = Gtk.Viewport()
         viewport.add(self.controls_box)
 
         self.controls_scroll = Gtk.ScrolledWindow()
+        self.controls_scroll.set_size_request(310, -1)
         self.controls_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.controls_scroll.add(viewport)
 
@@ -91,6 +93,7 @@ class PropertyPanel(Gtk.Box):
         self.width_spin = Gtk.SpinButton()
         self.width_spin.set_range(320, 3840)
         self.width_spin.set_increments(10, 100)
+        self.width_spin.set_size_request(95, -1)
         self.width_spin.set_value(int(initial_width))
         self.width_spin.set_numeric(True)
         self.width_spin.connect("value-changed", self.on_resolution_spin_changed)
@@ -100,6 +103,7 @@ class PropertyPanel(Gtk.Box):
         self.height_spin = Gtk.SpinButton()
         self.height_spin.set_range(240, 2160)
         self.height_spin.set_increments(10, 100)
+        self.height_spin.set_size_request(95, -1)
         self.height_spin.set_value(int(initial_height))
         self.height_spin.set_numeric(True)
         self.height_spin.connect("value-changed", self.on_resolution_spin_changed)
