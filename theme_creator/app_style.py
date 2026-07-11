@@ -28,4 +28,9 @@ window {
     outline: 3px solid #ffd166;
     outline-offset: -3px;
 }
+.inspector-section-title {
+    color: #ffd166;
+    font-weight: bold;
+    margin-top: 10px;
+}
 """

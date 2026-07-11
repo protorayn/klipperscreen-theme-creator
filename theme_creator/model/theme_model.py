@@ -180,12 +180,23 @@ DEFAULT_ROLES = {
     },
 }
 
+DEFAULT_TEXT_SHADOW = {
+    "enabled": False,
+    "color": "#000000",
+    "alpha": 0.75,
+    "x": 2,
+    "y": 2,
+    "blur": 4,
+}
 
 class ThemeModel:
     def __init__(self):
         self.theme_name = "new_theme"
         self.selected_role = None
         self.roles = deepcopy(DEFAULT_ROLES)
+
+        for role in self.roles.values():
+            role.setdefault("text_shadow", deepcopy(DEFAULT_TEXT_SHADOW))
 
     def select_role(self, role_name):
         if role_name in self.roles:

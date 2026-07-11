@@ -5,6 +5,16 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
 
 
+DEFAULT_TEXT_SHADOW = {
+    "enabled": False,
+    "color": "#000000",
+    "alpha": 0.75,
+    "x": 2,
+    "y": 2,
+    "blur": 4,
+}
+
+
 def rgba_from_hex(hex_color, alpha=1.0):
     rgba = Gdk.RGBA()
     rgba.parse(hex_color)
@@ -70,6 +80,8 @@ class PropertyPanel(Gtk.Box):
             self.show_empty_state()
             return
 
+        role_data.setdefault("text_shadow", DEFAULT_TEXT_SHADOW.copy())
+
         self.selected_label.set_text(f"Selected: {role_data['label']}")
 
         self.loading = True
@@ -93,6 +105,53 @@ class PropertyPanel(Gtk.Box):
             role_data["text"]["color"],
             ("text", "color"),
         )
+
+        if role_data.get("text_selectors"):
+            self.add_section_label("Text Shadow")
+            self.add_switch_control(
+                "Enabled",
+                role_data["text_shadow"]["enabled"],
+                ("text_shadow", "enabled"),
+            )
+            self.add_color_control(
+                "Shadow color",
+                role_data["text_shadow"]["color"],
+                ("text_shadow", "color"),
+            )
+            self.add_scale_control(
+                "Shadow opacity",
+                role_data["text_shadow"]["alpha"],
+                0.0,
+                1.0,
+                0.01,
+                ("text_shadow", "alpha"),
+            )
+            self.add_scale_control(
+                "Shadow X offset",
+                role_data["text_shadow"]["x"],
+                -10,
+                10,
+                1,
+                ("text_shadow", "x"),
+            )
+            self.add_scale_control(
+                "Shadow Y offset",
+                role_data["text_shadow"]["y"],
+                -10,
+                10,
+                1,
+                ("text_shadow", "y"),
+            )
+            self.add_scale_control(
+                "Shadow blur",
+                role_data["text_shadow"]["blur"],
+                0,
+                20,
+                1,
+                ("text_shadow", "blur"),
+            )
+
+        self.add_section_label("Border")
         self.add_color_control(
             "Border",
             role_data["border"]["color"],
@@ -129,11 +188,11 @@ class PropertyPanel(Gtk.Box):
         self.loading = False
         self.show_all()
 
-    def add_label(self, text):
+    def add_section_label(self, text):
         label = Gtk.Label(label=text)
         label.set_xalign(0)
-        self.controls_box.pack_start(label, False, False, 0)
-        return label
+        label.get_style_context().add_class("inspector-section-title")
+        self.controls_box.pack_start(label, False, False, 6)
 
     def add_color_control(self, label_text, color_hex, path):
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -174,6 +233,39 @@ class PropertyPanel(Gtk.Box):
         self.controls_box.pack_start(label, False, False, 0)
         self.controls_box.pack_start(scale, False, False, 0)
 
+    def add_combo_control(self, label_text, active_value, options, path):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+
+        label = Gtk.Label(label=label_text, hexpand=True)
+        label.set_xalign(0)
+
+        combo = Gtk.ComboBoxText()
+        for value, display_text in options:
+            combo.append(value, display_text)
+
+        combo.set_active_id(active_value)
+        combo.connect("changed", self.on_combo_changed, path)
+
+        row.pack_start(label, True, True, 0)
+        row.pack_start(combo, False, False, 0)
+
+        self.controls_box.pack_start(row, False, False, 0)
+
+    def add_switch_control(self, label_text, active, path):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+
+        label = Gtk.Label(label=label_text, hexpand=True)
+        label.set_xalign(0)
+
+        switch = Gtk.Switch(active=bool(active))
+        switch.set_valign(Gtk.Align.CENTER)
+        switch.connect("notify::active", self.on_switch_changed, path)
+
+        row.pack_start(label, True, True, 0)
+        row.pack_start(switch, False, False, 0)
+
+        self.controls_box.pack_start(row, False, False, 0)
+
     def on_color_changed(self, color_button, path):
         if self.loading:
             return
@@ -187,7 +279,7 @@ class PropertyPanel(Gtk.Box):
 
         value = scale.get_value()
 
-        if path[-1] in {"width", "radius", "padding", "margin"}:
+        if path[-1] in {"width", "radius", "padding", "margin", "x", "y", "blur"}:
             value = int(round(value))
             value_label.set_text(f"{label_text}: {value}")
         else:
@@ -206,26 +298,14 @@ class PropertyPanel(Gtk.Box):
 
         self.emit_change(path, value)
 
+    def on_switch_changed(self, switch, _gparam, path):
+        if self.loading:
+            return
+
+        self.emit_change(path, switch.get_active())
+
     def emit_change(self, path, value):
         if self.on_property_changed is None or self.current_role_name is None:
             return
 
         self.on_property_changed(self.current_role_name, path, value)
-    
-    def add_combo_control(self, label_text, active_value, options, path):
-        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-
-        label = Gtk.Label(label=label_text, hexpand=True)
-        label.set_xalign(0)
-
-        combo = Gtk.ComboBoxText()
-        for value, display_text in options:
-            combo.append(value, display_text)
-
-        combo.set_active_id(active_value)
-        combo.connect("changed", self.on_combo_changed, path)
-
-        row.pack_start(label, True, True, 0)
-        row.pack_start(combo, False, False, 0)
-
-        self.controls_box.pack_start(row, False, False, 0)

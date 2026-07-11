@@ -39,6 +39,23 @@ def border_css(border):
 
     return "    border: 0;\n"
 
+def text_shadow_css(role):
+    shadow = role.get("text_shadow", {})
+
+    if not shadow.get("enabled", False):
+        return "    text-shadow: none;\n"
+
+    color = hex_to_rgba(
+        shadow.get("color", "#000000"),
+        float(shadow.get("alpha", 0.75)),
+    )
+
+    x = int(shadow.get("x", 2))
+    y = int(shadow.get("y", 2))
+    blur = int(shadow.get("blur", 4))
+
+    return f"    text-shadow: {x}px {y}px {blur}px {color};\n"
+
 
 def role_css(role):
     selectors = selector_block(role["selectors"])
@@ -67,7 +84,7 @@ def role_css(role):
         css += f"""
 {text_selectors} {{
     color: {text_color};
-}}
+{text_shadow_css(role)} }}
 """
 
     return css
