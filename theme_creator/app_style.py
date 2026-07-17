@@ -67,4 +67,22 @@ window {
     outline: 3px solid #ffd166;
     outline-offset: -3px;
 }
+
+.editor-action-button {
+    color: #fdf6e3;
+    background-color: #263744;
+    background-image: none;
+    border: 1px solid #3a4a55;
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 14px;
+}
+
+.editor-action-button:hover {
+    background-color: #314756;
+}
+
+.editor-action-button:active {
+    background-color: #1b2630;
+}
 """

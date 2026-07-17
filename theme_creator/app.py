@@ -5,7 +5,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
 
 from theme_creator.app_style import APP_CSS
-from theme_creator.export.css_generator import generate_preview_css
+from theme_creator.export.css_generator import generate_preview_css, generate_theme_css
 from theme_creator.inspector.property_panel import PropertyPanel
 from theme_creator.model.theme_model import ThemeModel
 from theme_creator.preview.main_preview import MainPreview
@@ -66,6 +66,7 @@ class ThemeCreatorWindow(Gtk.ApplicationWindow):
         self.inspector = PropertyPanel(
             on_property_changed=self.on_property_changed,
             on_resolution_changed=self.on_resolution_changed,
+            on_export_requested=self.on_export_requested,
             initial_width=self.theme_model.target_width,
             initial_height=self.theme_model.target_height,
         )
@@ -104,6 +105,34 @@ class ThemeCreatorWindow(Gtk.ApplicationWindow):
     def apply_preview_css(self):
         css = generate_preview_css(self.theme_model)
         self.preview_css_provider.load_from_data(css.encode("utf-8"))
+
+    def on_export_requested(self):
+        dialog = Gtk.FileChooserDialog(
+            title="Export style.css",
+            parent=self,
+            action=Gtk.FileChooserAction.SAVE,
+        )
+
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL,
+            Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_SAVE,
+            Gtk.ResponseType.OK,
+        )
+
+        dialog.set_current_name("style.css")
+        dialog.set_do_overwrite_confirmation(True)
+
+        response = dialog.run()
+
+        if response == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+            css = generate_theme_css(self.theme_model)
+
+            with open(filename, "w", encoding="utf-8") as css_file:
+                css_file.write(css)
+
+        dialog.destroy()
 
 
 class ThemeCreatorApp(Gtk.Application):

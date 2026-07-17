@@ -35,6 +35,7 @@ class PropertyPanel(Gtk.Box):
         self,
         on_property_changed=None,
         on_resolution_changed=None,
+        on_export_requested=None,
         initial_width=1024,
         initial_height=600,
     ):
@@ -42,6 +43,7 @@ class PropertyPanel(Gtk.Box):
 
         self.on_property_changed = on_property_changed
         self.on_resolution_changed = on_resolution_changed
+        self.on_export_requested = on_export_requested
         self.current_role_name = None
         self.current_role = None
         self.loading = False
@@ -61,6 +63,12 @@ class PropertyPanel(Gtk.Box):
 
         self.pack_start(title, False, False, 0)
         self.pack_start(self.build_resolution_controls(initial_width, initial_height), False, False, 0)
+
+        export_button = Gtk.Button(label="Export style.css")
+        export_button.get_style_context().add_class("editor-action-button")
+        export_button.connect("clicked", self.on_export_clicked)
+        self.pack_start(export_button, False, False, 0)
+
         self.pack_start(Gtk.Separator(), False, False, 4)
         self.pack_start(self.selected_label, False, False, 0)
 
@@ -386,3 +394,9 @@ class PropertyPanel(Gtk.Box):
             return
 
         self.on_property_changed(self.current_role_name, path, value)
+
+    def on_export_clicked(self, _button):
+        if self.on_export_requested is None:
+            return
+
+        self.on_export_requested()
